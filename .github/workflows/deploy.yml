@@ -1,4 +1,4 @@
-name: 🚀 Deploy Infra (Direct Git Pull)
+name: 🚀 Deploy Infra (Direct Git Pull) 🚀
 
 on:
   push:
