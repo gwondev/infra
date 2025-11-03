@@ -1,4 +1,4 @@
-name: 🚀 Deploy Infra (Local Build)
+name: 🚀 Deploy Infra (Direct Git Pull)
 
 on:
   push:
@@ -10,12 +10,7 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      # 1️⃣ 리포지토리 가져오기
-      - name: 📦 리포지토리 가져오기
-        uses: actions/checkout@v4
-
-      # 2️⃣ 서버에 SSH 접속하여 직접 빌드 및 실행
-      - name: 🌐 서버 접속 및 배포
+      - name: 🌐 서버 접속 및 배포 (Git Pull + Compose)
         uses: appleboy/ssh-action@v1.0.0
         with:
           host: ${{ secrets.SERVER_HOST }}
@@ -27,10 +22,13 @@ jobs:
             echo "=== 📂 Infra 배포 디렉토리 이동 ==="
             cd ~
 
-            # 폴더 존재 여부 확인 후 처리
+            # 기존 infra 폴더 있으면 강제 동기화
             if [ -d "infra/.git" ]; then
-              echo "✅ 기존 infra 폴더 발견 — 최신 코드 갱신"
-              cd infra && git pull
+              echo "✅ 기존 infra 폴더 발견 — 최신 코드 강제 동기화"
+              cd infra
+              git fetch --all
+              git reset --hard origin/main
+              git clean -fdx
             else
               echo "🆕 infra 폴더 없음 — 새로 클론"
               git clone https://github.com/${{ github.repository }} infra
@@ -39,11 +37,12 @@ jobs:
 
             echo ""
             echo "=== 🧱 Docker Compose 빌드 ==="
-            docker compose build
+            docker compose build --no-cache
 
             echo ""
             echo "=== 🚀 컨테이너 재시작 중... ==="
-            docker compose up -d --remove-orphans
+            docker compose down --remove-orphans
+            docker compose up -d
 
             echo ""
             echo "=== ✅ Infra 서비스 재배포 완료 ==="
