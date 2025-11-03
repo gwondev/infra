@@ -1,3 +1,59 @@
-<html>
-<h1>Test Page</h1>
-</html>
+# ---------------------------
+# 🌐 gwon.my (자동 HTTPS)
+# ---------------------------
+gwon.my {
+  encode zstd gzip
+
+  # 1️⃣ 백엔드 API
+  handle /backend* {
+    reverse_proxy gwon-backend:8080
+  }
+
+  # 2️⃣ WebSocket
+  handle /ws* {
+    reverse_proxy gwon-backend:8080 {
+      transport http {
+        versions 1.1
+      }
+      header_up Connection {>Connection}
+      header_up Upgrade {>Upgrade}
+    }
+  }
+
+  # 3️⃣ /infra → HTML 정적 페이지
+  handle_path /infra* {
+    root * /pages
+    try_files {path} /infra.html
+    file_server
+  }
+
+  # 4️⃣ 그 외 요청 → 프론트엔드
+  handle {
+    reverse_proxy gwon-frontend:3000
+  }
+}
+
+# ---------------------------
+# 🌐 move.io.kr
+# ---------------------------
+move.io.kr {
+  encode zstd gzip
+
+  handle /backend* {
+    reverse_proxy move-backend:8080
+  }
+
+  handle /ws* {
+    reverse_proxy move-backend:8080 {
+      transport http {
+        versions 1.1
+      }
+      header_up Connection {>Connection}
+      header_up Upgrade {>Upgrade}
+    }
+  }
+
+  handle {
+    reverse_proxy move-frontend:5173
+  }
+}
