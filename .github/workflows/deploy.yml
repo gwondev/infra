@@ -26,7 +26,7 @@ jobs:
           push: true
           tags: ${{ secrets.DOCKERHUB_USER }}/infra:latest
 
-      - name: 서버 배포
+      - name: Sever Deploy
         uses: appleboy/ssh-action@v1.0.0
         with:
           host: ${{ secrets.SERVER_HOST }}
