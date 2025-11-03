@@ -19,7 +19,7 @@ services:
       - ./mosquitto/config:/mosquitto/config
       - mosquitto_data:/mosquitto/data
 
-# 📦 데이터 유지용 볼륨
+# 📦 데이터 유지용 볼륨,
 volumes:
   caddy_data:
   caddy_config:
