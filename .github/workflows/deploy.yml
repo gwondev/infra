@@ -1,32 +1,36 @@
-name: deploy
+name: 🚀 Deploy Infra
 
 on:
   push:
     branches:
-      - main
+      - main   # main 브랜치에 push될 때만 실행
 
 jobs:
   build:
     runs-on: ubuntu-latest
 
     steps:
-      - name: 리포지토리 가져오기
+      # 1️⃣ 리포지토리 코드 가져오기
+      - name: 📦 리포지토리 가져오기
         uses: actions/checkout@v4
 
-      - name: Docker Hub 로그인
+      # 2️⃣ Docker Hub 로그인
+      - name: 🔑 Docker Hub 로그인
         uses: docker/login-action@v3
         with:
           username: ${{ secrets.DOCKERHUB_USER }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
 
-      - name: 이미지 빌드 및 푸시
+      # 3️⃣ Docker 이미지 빌드 및 푸시
+      - name: 🛠️ infra 이미지 빌드 및 푸시
         uses: docker/build-push-action@v6
         with:
           context: .
           push: true
           tags: ${{ secrets.DOCKERHUB_USER }}/infra:latest
 
-      - name: Sever Deploy
+      # 4️⃣ SSH 접속하여 서버 자동 배포
+      - name: 🌐 서버에 접속하여 배포 실행
         uses: appleboy/ssh-action@v1.0.0
         with:
           host: ${{ secrets.SERVER_HOST }}
@@ -35,12 +39,27 @@ jobs:
           port: 22
           script: |
             set -e
+            echo "=== 📂 Infra 배포 디렉토리 이동 ==="
             cd ~
+            
+            # 폴더가 있으면 업데이트, 없으면 새로 클론
             if [ -d "infra/.git" ]; then
+              echo "✅ 기존 infra 폴더 발견 — 최신 코드로 갱신"
               cd infra && git pull
             else
+              echo "🆕 infra 폴더가 없어 새로 클론 중..."
               git clone https://github.com/${{ github.repository }} infra
               cd infra
             fi
+
+            echo ""
+            echo "=== 🐳 Docker Compose Pull ==="
             docker compose pull
+
+            echo ""
+            echo "=== 🚀 컨테이너 재시작 중... ==="
             docker compose up -d --remove-orphans
+
+            echo ""
+            echo "=== ✅ Infra 서비스 재배포 완료 =="
+            docker ps --format "table {{.Names}}\t{{.Image}}\t{{.Status}}"
