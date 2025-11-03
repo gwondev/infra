@@ -1,4 +1,4 @@
-name: Deploy
+name: 배포
 
 on:
   push:
@@ -10,27 +10,23 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      # 1️⃣ 리포지토리 코드 체크아웃 (Caddyfile 등 가져오기)
-      - name: 📦 Checkout repository
+      - name: 리포지토리 가져오기
         uses: actions/checkout@v4
 
-      # 2️⃣ Docker Hub 로그인
-      - name: 🔑 Login to Docker Hub
+      - name: Docker Hub 로그인
         uses: docker/login-action@v3
         with:
           username: ${{ secrets.DOCKERHUB_USER }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
 
-      # 3️⃣ settings 이미지를 빌드하고 푸시
-      - name: 🛠️ Build and Push Docker Image
+      - name: 이미지 빌드 및 푸시
         uses: docker/build-push-action@v6
         with:
           context: .
           push: true
-          tags: ${{ secrets.DOCKERHUB_USER }}/settings:latest
+          tags: ${{ secrets.DOCKERHUB_USER }}/infra:latest
 
-      # 4️⃣ SSH로 서버 접속 후 Docker Hub에서 새 이미지 pull & compose 재시작
-      - name: 🚀 Deploy via SSH
+      - name: 서버 배포
         uses: appleboy/ssh-action@v1.0.0
         with:
           host: ${{ secrets.SERVER_HOST }}
@@ -39,6 +35,12 @@ jobs:
           port: 22
           script: |
             set -e
-            cd ~/settings
+            cd ~
+            if [ -d "infra/.git" ]; then
+              cd infra && git pull
+            else
+              git clone https://github.com/${{ github.repository }} infra
+              cd infra
+            fi
             docker compose pull
-            docker compose up -d
+            docker compose up -d --remove-orphans
