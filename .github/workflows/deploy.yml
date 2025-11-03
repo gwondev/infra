@@ -1,36 +1,21 @@
-name: 🚀 Deploy Infra
+name: 🚀 Deploy Infra (Local Build)
 
 on:
   push:
     branches:
-      - main   # main 브랜치에 push될 때만 실행
+      - main  # main 브랜치 푸시 시 실행
 
 jobs:
-  build:
+  deploy:
     runs-on: ubuntu-latest
 
     steps:
-      # 1️⃣ 리포지토리 코드 가져오기
+      # 1️⃣ 리포지토리 가져오기
       - name: 📦 리포지토리 가져오기
         uses: actions/checkout@v4
 
-      # 2️⃣ Docker Hub 로그인
-      - name: 🔑 Docker Hub 로그인
-        uses: docker/login-action@v3
-        with:
-          username: ${{ secrets.DOCKERHUB_USER }}
-          password: ${{ secrets.DOCKERHUB_TOKEN }}
-
-      # 3️⃣ Docker 이미지 빌드 및 푸시
-      - name: 🛠️ infra 이미지 빌드 및 푸시
-        uses: docker/build-push-action@v6
-        with:
-          context: .
-          push: true
-          tags: ${{ secrets.DOCKERHUB_USER }}/infra:latest
-
-      # 4️⃣ SSH 접속하여 서버 자동 배포
-      - name: 🌐 서버에 접속하여 배포 실행
+      # 2️⃣ 서버에 SSH 접속하여 직접 빌드 및 실행
+      - name: 🌐 서버 접속 및 배포
         uses: appleboy/ssh-action@v1.0.0
         with:
           host: ${{ secrets.SERVER_HOST }}
@@ -41,25 +26,25 @@ jobs:
             set -e
             echo "=== 📂 Infra 배포 디렉토리 이동 ==="
             cd ~
-            
-            # 폴더가 있으면 업데이트, 없으면 새로 클론
+
+            # 폴더 존재 여부 확인 후 처리
             if [ -d "infra/.git" ]; then
-              echo "✅ 기존 infra 폴더 발견 — 최신 코드로 갱신"
+              echo "✅ 기존 infra 폴더 발견 — 최신 코드 갱신"
               cd infra && git pull
             else
-              echo "🆕 infra 폴더가 없어 새로 클론 중..."
+              echo "🆕 infra 폴더 없음 — 새로 클론"
               git clone https://github.com/${{ github.repository }} infra
               cd infra
             fi
 
             echo ""
-            echo "=== 🐳 Docker Compose Pull ==="
-            docker compose pull
+            echo "=== 🧱 Docker Compose 빌드 ==="
+            docker compose build
 
             echo ""
             echo "=== 🚀 컨테이너 재시작 중... ==="
             docker compose up -d --remove-orphans
 
             echo ""
-            echo "=== ✅ Infra 서비스 재배포 완료 =="
+            echo "=== ✅ Infra 서비스 재배포 완료 ==="
             docker ps --format "table {{.Names}}\t{{.Image}}\t{{.Status}}"
